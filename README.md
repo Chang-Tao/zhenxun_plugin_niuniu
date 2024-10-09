@@ -1,12 +1,19 @@
 # zhenxun_plugin_niuniu
-真寻群内小游戏插件-牛牛大作战(误
+真寻群内小游戏插件-牛牛大作战
 
-# 本插件无需数据库！(因为我不会bushi)
-
-# [nonebot版本](https://github.com/molanp/zhenxun_plugin_niuniu/tree/nonebot)
+## 原项目 [molanp/zhenxun_plugin_niuniu](https://github.com/molanp/zhenxun_plugin_niuniu)
+在将其部署到真寻bot中时, 遇到以下问题
+1. 无法使用排行榜
+2. 排行榜使用image方式展示
+3. image的函数(buildmap)有问题, 但不知道是什么问题
+4. 排行榜排名显示异常
+##
+解决方法:
+由于本人python能力有限, 在GPT的帮助下对buildmap函数进行了修改, 启用了iamge方式展示排行榜,而是用文本进行展示
 
 ## 使用方法
-下载压缩包，解压并放入`extensive_plugin`文件夹或其他自定义文件夹中
+下载压缩包，解压并放入`plugin`文件夹或其他自定义文件夹中
+参考路径 zhenxun/plugins/zhenxun_plugin_niuniu
 
 ## 指令
 |指令|功能描述|
