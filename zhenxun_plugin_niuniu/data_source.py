@@ -8,12 +8,27 @@ from PIL import Image
 from io import BytesIO
 from decimal import Decimal as de
 from pathlib import Path
-from models.group_member_info import GroupInfoUser
-from utils.image_utils import BuildMat
-from configs.path_config import IMAGE_PATH
+from zhenxun.models.group_member_info import GroupInfoUser
+from zhenxun.utils.image_utils import BuildMat
+from zhenxun.configs.path_config import IMAGE_PATH
 from typing import List, Union
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+from nonebot import get_bot
+
+from nonebot import get_bot
+
+async def get_user_nickname(user_id: int, group_id: int) -> str:
+    """
+    获取用户在特定群组中的昵称
+    """
+    bot = get_bot()  # 获取bot对象
+    try:
+        user_info = await bot.get_group_member_info(group_id=group_id, user_id=user_id)
+        return user_info['nickname']  # 返回用户在该群组中的昵称
+    except Exception as e:
+        print(f"Error getting user nickname: {e}")  # 打印错误信息以便调试
+        return str(user_id)  # 如果获取失败，返回用户ID
 
 
 def pic2b64(pic: Image) -> str:
@@ -116,7 +131,7 @@ def fencing(my_length, oppo_length, at_qq, my_qq, group, content={}):
     确定击剑比赛的结果。
 
     Args:
-        my_length (decimal): 我的当前长度，decimal 类型以确保精度。
+        my_length (decimal): 我的当前长度，decimal ���型以确保精度。
         oppo_length (decimal): 对手的当前长度，decimal 类型以确保精度。
         at_qq (str): 被 @ 的人的 QQ 号码。
         my_qq (str): 我的 QQ 号码。
@@ -225,7 +240,7 @@ def apply_skill(my, oppo, increase_length1):
                 f"牛牛凹进去的深度变浅了欸！变浅了{reduce}cm！"
             ])
         else:
-            result = f"你以绝对的长度让对方屈服了呢！你的长度增加{reduce}cm，当前长度{my}cm！"
+            result = f"你以绝对的长度让对方屈服了呢！你的长度增加{reduce}cm，当前���度{my}cm！"
     else:
         my -= reduce
         oppo += de(0.8)*reduce
@@ -293,28 +308,74 @@ async def init_rank(
     )
 
 
-def _init_rank_graph(
-    title: str, _uname_lst: List[str], _num_lst: List[Union[int, float]]
-) -> BuildMat:
+#def _init_rank_graph(
+#    title: str, _uname_lst: List[str], _num_lst: List[Union[int, float]]
+#) -> BuildMat:
+#    """
+#    生成排行榜统计图
+#    :param title: 排行榜标题
+#    :param _uname_lst: 用户名列表
+#    :param _num_lst: 数值列表
+#    """
+#    image = BuildMat(
+#        y=_num_lst,
+#        y_name="* 可以在命令后添加数字来指定排行人数 至多 50 *",
+#        mat_type="barh",
+#        title=title,
+#        x_index=_uname_lst,
+#        display_num=True,
+#        x_rotate=30,
+#        background=[
+#            f"{IMAGE_PATH}/background/create_mat/{x}"
+#            for x in os.listdir(f"{IMAGE_PATH}/background/create_mat")
+#        ],
+#        bar_color=["*"],
+#    )
+#    image.gen_graph()
+# return image
+
+
+
+async def init_rank(
+    title: str,
+    all_user_id: List[int],
+    all_user_data: List[float],
+    group_id: int,
+    total_count: int = 10,
+    rank_type: str = "长度"  # 新增参数
+) -> str:
     """
-    生成排行榜统计图
-    :param title: 排行榜标题
-    :param _uname_lst: 用户名列表
-    :param _num_lst: 数值列表
+    说明:
+        初始化通用的数据排行榜
+    参数:
+        :param title: 排行榜标题
+        :param all_user_id: 所有用户的QQ号
+        :param all_user_data: 所有用户需要排行的对应数据
+        :param group_id: 群号，用于从数据库中获取该用户在此群的昵称
+        :param total_count: 获取人数总数
+        :param rank_type: 排行榜类型（长度或深度）
     """
-    image = BuildMat(
-        y=_num_lst,
-        y_name="* 可以在命令后添加数字来指定排行人数 至多 50 *",
-        mat_type="barh",
-        title=title,
-        x_index=_uname_lst,
-        display_num=True,
-        x_rotate=30,
-        background=[
-            f"{IMAGE_PATH}/background/create_mat/{x}"
-            for x in os.listdir(f"{IMAGE_PATH}/background/create_mat")
-        ],
-        bar_color=["*"],
+    # 将用户ID和对应的数据组合在一起
+    combined = list(zip(all_user_id, all_user_data))
+
+    # 按照数据的大小进行排序（从大到小）
+    combined.sort(key=lambda x: x[1], reverse=True)
+
+    _uname_lst = []
+    _num_lst = []
+
+    # 获取用户昵称的字典
+    user_nicknames = {user_id: await get_user_nickname(user_id, group_id) for user_id in all_user_id}
+
+    for i in range(len(combined) if len(combined) < total_count else total_count):
+        max_user_id, max_data = combined[i]
+        user_name = user_nicknames.get(max_user_id, str(max_user_id))  # 使用昵称，如果没有则用QQ号
+        _uname_lst.append(user_name)
+        _num_lst.append(max_data)
+
+    # 生成文本格式的排行榜
+    rank_text = f"{title}\n" + "\n".join(
+        [f"第{i + 1}名  id: {uname}  {rank_type}: {num}cm" for i, (uname, num) in enumerate(zip(_uname_lst, _num_lst))]
     )
-    image.gen_graph()
-    return image
+
+    return rank_text
