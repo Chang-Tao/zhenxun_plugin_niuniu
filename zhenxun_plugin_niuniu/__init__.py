@@ -7,6 +7,7 @@ from .data_source import *
 from decimal import Decimal as de
 import time
 import random
+from pathlib import Path
 
 __zx_plugin_name__ = "牛牛大作战"
 __plugin_usage__ = """
@@ -105,8 +106,8 @@ async def _(event: GroupMessageEvent):
         group_user_jj[group][qq] = {}
     try:
         time_pass = int(time.time() - group_user_jj[group][qq]["time"])
-        if time_pass < 180:
-            time_rest = 180 - time_pass
+        if time_pass < 30:
+            time_rest = 30 - time_pass
             jj_refuse = [
                 f"才过去了{time_pass}s时间,你就又要击剑了，真是饥渴难耐啊",
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
@@ -116,7 +117,7 @@ async def _(event: GroupMessageEvent):
             await niuzi_fencing.finish(random.choice(jj_refuse), at_sender=True)
     except KeyError:
         pass
-    #
+
     msg = event.get_message()
     content = ReadOrWrite("data/long.json")
     at_list = []
@@ -159,6 +160,7 @@ async def _(event: GroupMessageEvent):
     qq = str(event.user_id)
     group = str(event.group_id)
     content = ReadOrWrite("data/long.json")
+    nickname = await get_user_nickname(event.user_id, event.group_id)
     try:
         my_long = content[group][qq]
         values = [content[group][key] for key in sorted(content[group], key=lambda k: content[group][k], reverse=True)]
@@ -232,6 +234,7 @@ async def _(event: GroupMessageEvent):
         await niuzi_my.finish(Message(result), at_sender=True)
 
 
+
 @niuzi_ranking.handle()
 async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
     num = arg.extract_plain_text().strip()
@@ -239,18 +242,23 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         num = int(num)
     else:
         num = 10
-    all_users = get_all_users(str(event.group_id))
+
+    # 使用 @niuzi_my.handle() 的逻辑获取用户信息
+    content = ReadOrWrite("data/long.json")
+    group = str(event.group_id)
+    user_data = {key: content[group][key] for key in content[group] if key in content[group]}
+
     all_user_id = []
     all_user_data = []
-    for user_id, user_data in all_users.items():
-        if user_data > 0:
+
+    for user_id, data in user_data.items():
+        if data > 0:
             all_user_id.append(int(user_id))
-            all_user_data.append(user_data)
+            all_user_data.append(data)
 
     if len(all_user_id) != 0:
-        rank_image = await init_rank("牛牛长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
-        if rank_image:
-            await niuzi_ranking.finish(image(b64=rank_image.pic2bs4()))
+        rank_text = await init_rank("牛牛长度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num, rank_type="长度")  # 添加 rank_type 参数
+        await niuzi_ranking.finish(rank_text)
     else:
         await niuzi_ranking.finish(Message("暂无此排行榜数据...", at_sender=True))
 
@@ -262,20 +270,26 @@ async def _(event: GroupMessageEvent, arg: Message = CommandArg()):
         num = int(num)
     else:
         num = 10
-    all_users = get_all_users(str(event.group_id))
+
+    # 使用 @niuzi_my.handle() 的逻辑获取用户信息
+    content = ReadOrWrite("data/long.json")
+    group = str(event.group_id)
+    user_data = {key: content[group][key] for key in content[group] if key in content[group]}
+
     all_user_id = []
     all_user_data = []
-    for user_id, user_data in all_users.items():
-        if user_data < 0:
+
+    for user_id, data in user_data.items():
+        if data < 0:
             all_user_id.append(int(user_id))
-            all_user_data.append(float(str(user_data)[1:]))
+            all_user_data.append(float(str(data)[1:]))  # 取绝对值
 
     if len(all_user_id) != 0:
-        rank_image = await init_rank("牛牛深度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num)
-        if rank_image:
-            await niuzi_ranking_e.finish(image(b64=rank_image.pic2bs4()))
+        rank_text = await init_rank("牛牛深度排行榜-单位cm", all_user_id, all_user_data, event.group_id, num, rank_type="深度")  # 添加 rank_type 参数
+        await niuzi_ranking_e.finish(rank_text)
     else:
         await niuzi_ranking_e.finish(Message("暂无此排行榜数据..."), at_sender=True)
+
 
 
 @niuzi_hit_glue.handle()
@@ -295,8 +309,8 @@ async def _(event: GroupMessageEvent):
         group_hit_glue[group][qq] = {}
     try:
         time_pass = int(time.time() - group_hit_glue[group][qq]["time"])
-        if time_pass < 180:
-            time_rest = 180 - time_pass
+        if time_pass < 30:
+            time_rest = 30 - time_pass
             glue_refuse = [
                 f"才过去了{time_pass}s时间,你就又要打🦶了，身体受得住吗",
                 f"不行不行，你的身体会受不了的，歇{time_rest}s再来吧",
